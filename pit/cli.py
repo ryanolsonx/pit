@@ -7,6 +7,29 @@ import sys
 GIT_DIR = ".pit"
 
 
+def write_tree(args):
+    write_tree_rec(".")
+
+
+def is_ignored(path):
+    return ".pit" in path.split("/")
+
+
+def write_tree_rec(dir):
+    with os.scandir(dir) as it:
+        for entry in it:
+            full = os.path.join(dir, entry.name)
+            if is_ignored(full):
+                continue
+
+            if entry.is_file(follow_symlinks=False):
+                # TODO: write the obj to object store
+                print(full)
+            elif entry.is_dir(follow_symlinks=False):
+                write_tree_rec(full)
+    # TODO: actually create the tree object
+
+
 def cat_file(args):
     expected = "blob"
 
@@ -63,6 +86,9 @@ def parse_args():
     cat_file_parser = cmds.add_parser("cat-file")
     cat_file_parser.set_defaults(func=cat_file)
     cat_file_parser.add_argument("object")
+
+    write_tree_parser = cmds.add_parser("write-tree")
+    write_tree_parser.set_defaults(func=write_tree)
 
     return parser.parse_args()
 
