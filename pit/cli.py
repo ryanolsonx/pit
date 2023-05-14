@@ -8,19 +8,35 @@ GIT_DIR = ".pit"
 
 
 def cat_file(args):
+    expected = "blob"
+
     sys.stdout.flush()
+
     with open(os.path.join(GIT_DIR, "objects", args.object), "rb") as f:
-        data = f.read()
+        obj = f.read()
+
+    type_, _, data = obj.partition(b"\x00")
+    type_ = type_.decode()
+
+    if expected is not None:
+        assert type_ == expected, f"Expected {expected}, got {type_}"
+
     sys.stdout.buffer.write(data)
 
 
 def hash_object(args):
+    type_ = "blob"
+
     with open(args.file, "rb") as f:
         data = f.read()
-        oid = hashlib.sha1(data).hexdigest()
+
+    obj = type_.encode() + b"\x00" + data
+    oid = hashlib.sha1(data).hexdigest()
     path = os.path.join(GIT_DIR, "objects", oid)
+
     with open(path, "wb") as out:
-        out.write(data)
+        out.write(obj)
+
     print(oid)
 
 
