@@ -1,11 +1,52 @@
 import argparse
 import hashlib
+import itertools
+import operator
 import os
 import sys
+import textwrap
+
+from collections import namedtuple
 
 
 GIT_DIR = ".pit"
 HEAD_PATH = f"{GIT_DIR}/HEAD"
+
+
+Commit = namedtuple ('Commit', ['tree', 'parent', 'message'])
+
+
+def get_commit(oid):
+    parent = None
+
+    commit = get_object(oid, "commit").decode()
+    lines = iter(commit.splitlines())
+    for line in itertools.takewhile(operator.truth, lines):
+        k, v = line.split(" ", 1)
+        if k == "tree":
+            tree = v
+        elif k == "parent":
+            parent = v
+        else:
+            assert False, f"Unknown key {k}"
+
+    msg = "\n".join(lines)
+    return Commit(tree=tree, parent=parent, message=msg)
+
+
+def log(oid):
+    while oid:
+        commit = get_commit(oid)
+
+        print(f"commit {oid}")
+        print(textwrap.indent(commit.message, "    "))
+        print(f"")
+
+        oid = commit.parent
+
+
+def log_cli(args):
+    log(args.oid or get_head())
 
 
 def set_head(oid):
@@ -27,11 +68,11 @@ def commit(msg):
     if HEAD:
         commit += f"parent {HEAD}\n"
     commit += f"\n{msg}\n"
-    
+
     oid = hash_object(commit.encode(), "commit")
 
     set_head(oid)
-    
+
     return oid
 
 
@@ -214,6 +255,10 @@ def parse_args():
     commit_parser = cmds.add_parser("commit")
     commit_parser.set_defaults(func=commit_cli)
     commit_parser.add_argument("-m", "--message", required=True)
+
+    log_parser = cmds.add_parser("log")
+    log_parser.set_defaults(func=log_cli)
+    log_parser.add_argument("oid", nargs="?")
 
     return parser.parse_args()
 
