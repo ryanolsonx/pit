@@ -153,6 +153,16 @@ def read_tree_cli(args):
     read_tree(args.tree)
 
 
+def checkout(oid):
+    commit = get_commit(oid)
+    read_tree(commit.tree)
+    set_head(oid)
+
+
+def checkout_cli(args):
+    checkout(args.oid)
+
+
 def write_tree(current_dir = "."):
     entries = []
     with os.scandir(current_dir) as dir:
@@ -259,6 +269,10 @@ def parse_args():
     log_parser = cmds.add_parser("log")
     log_parser.set_defaults(func=log_cli)
     log_parser.add_argument("oid", nargs="?")
+
+    checkout_parser = cmds.add_parser("checkout")
+    checkout_parser.set_defaults(func=checkout_cli)
+    checkout_parser.add_argument("oid")
 
     return parser.parse_args()
 
