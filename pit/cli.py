@@ -5,6 +5,38 @@ import sys
 
 
 GIT_DIR = ".pit"
+HEAD_PATH = f"{GIT_DIR}/HEAD"
+
+
+def set_head(oid):
+    with open(HEAD_PATH, "w") as f:
+        f.write(oid)
+
+
+def get_head():
+    if not os.path.isfile(HEAD_PATH):
+        return None
+
+    with open(HEAD_PATH) as f:
+        return f.read().strip()
+
+
+def commit(msg):
+    commit = f"tree {write_tree()}\n"
+    HEAD = get_head()
+    if HEAD:
+        commit += f"parent {HEAD}\n"
+    commit += f"\n{msg}\n"
+    
+    oid = hash_object(commit.encode(), "commit")
+
+    set_head(oid)
+    
+    return oid
+
+
+def commit_cli(args):
+    print(commit(args.message))
 
 
 def is_ignored(path):
@@ -80,7 +112,7 @@ def read_tree_cli(args):
     read_tree(args.tree)
 
 
-def write_tree(current_dir):
+def write_tree(current_dir = "."):
     entries = []
     with os.scandir(current_dir) as dir:
         for entry in dir:
@@ -107,7 +139,7 @@ def write_tree(current_dir):
 
 
 def write_tree_cli(args):
-    print(write_tree("."))
+    print(write_tree())
 
 
 def cat_file_cli(args):
@@ -178,6 +210,10 @@ def parse_args():
     read_tree_parser = cmds.add_parser("read-tree")
     read_tree_parser.set_defaults(func=read_tree_cli)
     read_tree_parser.add_argument("tree")
+
+    commit_parser = cmds.add_parser("commit")
+    commit_parser.set_defaults(func=commit_cli)
+    commit_parser.add_argument("-m", "--message", required=True)
 
     return parser.parse_args()
 
